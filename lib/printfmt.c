@@ -199,6 +199,8 @@ vprintfmt(void (*putch)(int, void*), void *putdat, const char *fmt, va_list ap)
 			if ((long long) num < 0) {
 				putch('-', putdat);
 				num = -(long long) num;
+			}else if((long long) num > 0){
+				putch('+', putdat);			
 			}
 			base = 10;
 			goto number;
