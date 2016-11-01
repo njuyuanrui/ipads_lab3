@@ -8,6 +8,8 @@
 #include <inc/stdarg.h>
 #include <inc/error.h>
 
+#define PLUS 1
+
 /*
  * Space or zero padding and a field width are supported for the numeric
  * formats only. 
@@ -91,7 +93,7 @@ vprintfmt(void (*putch)(int, void*), void *putdat, const char *fmt, va_list ap)
 	register const char *p;
 	register int ch, err;
 	unsigned long long num;
-	int base, lflag, width, precision, altflag;
+	int base, lflag, width, precision, altflag,flag;
 	char padc;
 
 	while (1) {
@@ -107,12 +109,16 @@ vprintfmt(void (*putch)(int, void*), void *putdat, const char *fmt, va_list ap)
 		precision = -1;
 		lflag = 0;
 		altflag = 0;
+		flag = 0;
 	reswitch:
 		switch (ch = *(unsigned char *) fmt++) {
 
 		// flag to pad on the right
 		case '-':
-			padc = '-';
+			padc = ' ';
+			goto reswitch;
+		case '+':
+			flag |= PLUS;
 			goto reswitch;
 			
 		// flag to pad with 0's instead of spaces
@@ -199,8 +205,9 @@ vprintfmt(void (*putch)(int, void*), void *putdat, const char *fmt, va_list ap)
 			if ((long long) num < 0) {
 				putch('-', putdat);
 				num = -(long long) num;
-			}else if((long long) num > 0){
-				putch('+', putdat);			
+			}
+			if(flag&PLUS && (long long) num > 0){
+				putch('+', putdat);
 			}
 			base = 10;
 			goto number;
