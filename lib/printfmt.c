@@ -9,7 +9,7 @@
 #include <inc/error.h>
 
 #define PLUS 1
-
+#define LEFT 2
 /*
  * Space or zero padding and a field width are supported for the numeric
  * formats only. 
@@ -33,28 +33,34 @@ static const char * const error_string[MAXERROR] =
 /*
  * Print a number (base <= 16) in reverse order,
  * using specified putch function and associated pointer putdat.
+ * justifyType:  0 no need ; 1 left ; 2 right
  */
-static void
+static int 
 printnum(void (*putch)(int, void*), void *putdat,
-	 unsigned long long num, unsigned base, int width, int padc)
+	 unsigned long long num, unsigned base, int width, int padc , int justifyType)
 {
 	// if cprintf'parameter includes pattern of the form "%-", padding
 	// space on the right side if neccesary.
 	// you can add helper function if needed.
 	// your code here:
 
-
+	int endWidth = width; 
 	// first recursively print all preceding (more significant) digits
 	if (num >= base) {
-		printnum(putch, putdat, num / base, base, width - 1, padc);
-	} else {
+		endWidth = printnum(putch, putdat, num / base, base, width - 1, padc, justifyType==2?2:0);
+	} else if(justifyType == 2){
 		// print any needed pad characters before first digit
 		while (--width > 0)
 			putch(padc, putdat);
 	}
-
+		
 	// then print this (the least significant) digit
 	putch("0123456789abcdef"[num % base], putdat);
+	if(justifyType == 1)
+		while (--endWidth > 0)	
+			putch(padc, putdat);
+	
+	return endWidth;
 }
 
 // Get an unsigned int of various possible sizes from a varargs list,
@@ -116,6 +122,7 @@ vprintfmt(void (*putch)(int, void*), void *putdat, const char *fmt, va_list ap)
 		// flag to pad on the right
 		case '-':
 			padc = ' ';
+			flag |= LEFT;
 			goto reswitch;
 		case '+':
 			flag |= PLUS;
@@ -241,7 +248,7 @@ vprintfmt(void (*putch)(int, void*), void *putdat, const char *fmt, va_list ap)
 			num = getuint(&ap, lflag);
 			base = 16;
 		number:
-			printnum(putch, putdat, num, base, width, padc);
+			printnum(putch, putdat, num, base, width, padc , (flag&LEFT)?1:2);
 			break;
 
         case 'n': {
