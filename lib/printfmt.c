@@ -275,12 +275,11 @@ vprintfmt(void (*putch)(int, void*), void *putdat, const char *fmt, va_list ap)
             if ((cnt = va_arg(ap, char *)) == NULL){
 		printfmt(putch, putdat, "%s", null_error);
 	        return;
-	    }else if( *(int*)(putdat) > 127){
+	    }
+	    *cnt = *(char*)(putdat); 
+	    if( *(int*)(putdat) > 127 ){
 		printfmt(putch, putdat, "%s", overflow_error);
-		return;
-	    }else{
-		*cnt = *(int*)(putdat); 
-	    }	
+	    }
 
             break;
         }
