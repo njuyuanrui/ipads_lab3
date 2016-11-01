@@ -256,8 +256,17 @@ vprintfmt(void (*putch)(int, void*), void *putdat, const char *fmt, va_list ap)
 
             const char *null_error = "\nerror! writing through NULL pointer! (%n argument)\n";
             const char *overflow_error = "\nwarning! The value %n argument pointed to has been overflowed!\n";
-
-            // Your code here
+	    
+            char *cnt;
+            if ((cnt = va_arg(ap, char *)) == NULL){
+		printfmt(putch, putdat, "%s", null_error);
+	        return;
+	    }else if( *(int*)(putdat) > 127){
+		printfmt(putch, putdat, "%s", overflow_error);
+		return;
+	    }else{
+		*cnt = *(int*)(putdat); 
+	    }	
 
             break;
         }
