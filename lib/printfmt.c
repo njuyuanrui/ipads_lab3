@@ -213,7 +213,7 @@ vprintfmt(void (*putch)(int, void*), void *putdat, const char *fmt, va_list ap)
 				putch('-', putdat);
 				num = -(long long) num;
 			}
-			if(flag&PLUS && (long long) num > 0){
+			else if(flag&PLUS && (long long) num > 0){
 				putch('+', putdat);
 			}
 			base = 10;

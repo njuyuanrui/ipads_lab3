@@ -169,10 +169,8 @@ monitor(struct Trapframe *tf)
 
 	cprintf("Welcome to the JOS kernel monitor!\n");
 	cprintf("Type 'help' for a list of commands.\n");
-	
-	cprintf("test:[%5d]\n",3 ,5);
-	
 
+	cprintf("test %+d\n",-1024);
 	while (1) {
 		buf = readline("K> ");
 		if (buf != NULL)
