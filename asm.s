@@ -1,0 +1,4 @@
+push $0xf0100964
+push $0xf0110da8
+push $0xf010087f
+ret

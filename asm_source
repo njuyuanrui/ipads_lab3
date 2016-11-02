@@ -1,0 +1,5 @@
+   0:	68 64 09 10 f0       	push   $0xf0100964
+   5:	68 a8 0d 11 f0       	push   $0xf0110da8
+   a:	68 7f 08 10 f0       	push   $0xf010087f
+   f:	c3                   	ret    
+

