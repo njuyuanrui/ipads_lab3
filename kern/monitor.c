@@ -24,6 +24,8 @@ struct Command {
 static struct Command commands[] = {
 	{ "help", "Display this list of commands", mon_help },
 	{ "kerninfo", "Display information about the kernel", mon_kerninfo },
+        { "mon_backtrace", "Display list of the function call frames", mon_backtrace },
+	{ "time","Display the running time of the command",time}
 };
 #define NCOMMANDS (sizeof(commands)/sizeof(commands[0]))
 
@@ -84,9 +86,31 @@ start_overflow(void)
     // hint: You can use the read_pretaddr function to retrieve 
     //       the pointer to the function call return address;
 
-    char str[256] = {};
+    char str[256] ={};
+    str[0] = 0x68;
+    str[1] = 0xfc;
+    str[2] = 0x09;
+    str[3] = 0x10;
+    str[4] = 0xf0;
+    str[5] = 0x68;
+    str[6] = 0xa8;
+    str[7] = 0x0d;
+    str[8] = 0x11;
+    str[9] = 0xf0;	
+    str[10] = 0x68;
+    str[11] = 0x2c;
+    str[12] = 0x09;
+    str[13] = 0x10;
+    str[14] = 0xf0;
+    str[15] = 0xc3;
+    str[16] = 0x00;
     int nstr = 0;
     char *pret_addr;
+    uint32_t add;
+    add = read_pretaddr();
+    cprintf("retaddr %s\n",str);
+    *( uint32_t*)add = ( uint32_t)(str);
+    //cprintf("retaddr %08x\n",*(int*)add);
 
 	// Your code here.
     
@@ -103,12 +127,42 @@ overflow_me(void)
 int
 mon_backtrace(int argc, char **argv, struct Trapframe *tf)
 {
-	// Your code here.
+    cprintf("Stack backtrace:\n");
+    
+    uint32_t* ebp = (uint32_t*)read_ebp();
+	 
+    while(ebp){
+	cprintf(" eip %08x ebp %08x args %08x %08x %08x %08x %08x \n" , *(ebp+1),ebp,*(ebp+2),*(ebp+3),*(ebp+4),*(ebp+5),*(ebp+6));
+	
+	struct  Eipdebuginfo info;
+        debuginfo_eip(*(ebp+1), &info);
+	cprintf(" %s:%d: %.*s+%d\n",info.eip_file, info.eip_line,info.eip_fn_namelen, info.eip_fn_name,*(ebp+1)-info.eip_fn_addr);
+	ebp = (uint32_t*)(*ebp);
+    }
+
     overflow_me();
     cprintf("Backtrace success\n");
-	return 0;
+    return 0;
 }
 
+int 
+time(int argc, char **argv, struct Trapframe *tf){
+        uint64_t start = 0,end = 0;
+        int ret = 0,i = 0;
+
+	start = getCycles();
+	for (i = 0; i < NCOMMANDS; i++) {
+		if (strcmp(argv[1], commands[i].name) == 0){
+			start = getCycles();			 
+			ret = commands[i].func(argc-1, argv+1, tf);
+			end = getCycles();
+			break;
+		}
+	}
+	cprintf("kerninfo cycles: %ld\n",end-start);
+	return ret;
+
+}
 
 
 /***** Kernel monitor command interpreter *****/
@@ -163,7 +217,7 @@ monitor(struct Trapframe *tf)
 	cprintf("Welcome to the JOS kernel monitor!\n");
 	cprintf("Type 'help' for a list of commands.\n");
 
-
+	cprintf("test %+d\n",-1024);
 	while (1) {
 		buf = readline("K> ");
 		if (buf != NULL)

@@ -8,6 +8,8 @@
 #include <inc/stdarg.h>
 #include <inc/error.h>
 
+#define PLUS 1
+#define LEFT 2
 /*
  * Space or zero padding and a field width are supported for the numeric
  * formats only. 
@@ -31,28 +33,34 @@ static const char * const error_string[MAXERROR] =
 /*
  * Print a number (base <= 16) in reverse order,
  * using specified putch function and associated pointer putdat.
+ * justifyType:  0 no need ; 1 left ; 2 right
  */
-static void
+static int 
 printnum(void (*putch)(int, void*), void *putdat,
-	 unsigned long long num, unsigned base, int width, int padc)
+	 unsigned long long num, unsigned base, int width, int padc , int justifyType)
 {
 	// if cprintf'parameter includes pattern of the form "%-", padding
 	// space on the right side if neccesary.
 	// you can add helper function if needed.
 	// your code here:
 
-
+	int endWidth = width; 
 	// first recursively print all preceding (more significant) digits
 	if (num >= base) {
-		printnum(putch, putdat, num / base, base, width - 1, padc);
-	} else {
+		endWidth = printnum(putch, putdat, num / base, base, width - 1, padc, justifyType==2?2:0);
+	} else if(justifyType == 2){
 		// print any needed pad characters before first digit
 		while (--width > 0)
 			putch(padc, putdat);
 	}
-
+		
 	// then print this (the least significant) digit
 	putch("0123456789abcdef"[num % base], putdat);
+	if(justifyType == 1)
+		while (--endWidth > 0)	
+			putch(padc, putdat);
+	
+	return endWidth;
 }
 
 // Get an unsigned int of various possible sizes from a varargs list,
@@ -91,7 +99,7 @@ vprintfmt(void (*putch)(int, void*), void *putdat, const char *fmt, va_list ap)
 	register const char *p;
 	register int ch, err;
 	unsigned long long num;
-	int base, lflag, width, precision, altflag;
+	int base, lflag, width, precision, altflag,flag;
 	char padc;
 
 	while (1) {
@@ -107,12 +115,17 @@ vprintfmt(void (*putch)(int, void*), void *putdat, const char *fmt, va_list ap)
 		precision = -1;
 		lflag = 0;
 		altflag = 0;
+		flag = 0;
 	reswitch:
 		switch (ch = *(unsigned char *) fmt++) {
 
 		// flag to pad on the right
 		case '-':
-			padc = '-';
+			padc = ' ';
+			flag |= LEFT;
+			goto reswitch;
+		case '+':
+			flag |= PLUS;
 			goto reswitch;
 			
 		// flag to pad with 0's instead of spaces
@@ -200,6 +213,9 @@ vprintfmt(void (*putch)(int, void*), void *putdat, const char *fmt, va_list ap)
 				putch('-', putdat);
 				num = -(long long) num;
 			}
+			else if(flag&PLUS && (long long) num > 0){
+				putch('+', putdat);
+			}
 			base = 10;
 			goto number;
 
@@ -213,10 +229,10 @@ vprintfmt(void (*putch)(int, void*), void *putdat, const char *fmt, va_list ap)
 		case 'o':
 			// Replace this with your code.
 			// display a number in octal form and the form should begin with '0'
-			putch('X', putdat);
-			putch('X', putdat);
-			putch('X', putdat);
-			break;
+			putch('0', putdat);			
+			num = getuint(&ap, lflag);
+			base = 8;
+			goto number;
 
 		// pointer
 		case 'p':
@@ -232,7 +248,7 @@ vprintfmt(void (*putch)(int, void*), void *putdat, const char *fmt, va_list ap)
 			num = getuint(&ap, lflag);
 			base = 16;
 		number:
-			printnum(putch, putdat, num, base, width, padc);
+			printnum(putch, putdat, num, base, width, padc , (flag&LEFT)?1:2);
 			break;
 
         case 'n': {
@@ -254,8 +270,16 @@ vprintfmt(void (*putch)(int, void*), void *putdat, const char *fmt, va_list ap)
 
             const char *null_error = "\nerror! writing through NULL pointer! (%n argument)\n";
             const char *overflow_error = "\nwarning! The value %n argument pointed to has been overflowed!\n";
-
-            // Your code here
+	    
+            char *cnt;
+            if ((cnt = va_arg(ap, char *)) == NULL){
+		printfmt(putch, putdat, "%s", null_error);
+	        return;
+	    }
+	    *cnt = *(char*)(putdat); 
+	    if( *(int*)(putdat) > 127 ){
+		printfmt(putch, putdat, "%s", overflow_error);
+	    }
 
             break;
         }
