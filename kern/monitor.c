@@ -25,6 +25,7 @@ static struct Command commands[] = {
 	{ "help", "Display this list of commands", mon_help },
 	{ "kerninfo", "Display information about the kernel", mon_kerninfo },
         { "mon_backtrace", "Display list of the function call frames", mon_backtrace },
+	{ "time","Display the running time of the command",time}
 };
 #define NCOMMANDS (sizeof(commands)/sizeof(commands[0]))
 
@@ -87,7 +88,7 @@ start_overflow(void)
 
     char str[256] ={};
     str[0] = 0x68;
-    str[1] = 0x4f;
+    str[1] = 0xfc;
     str[2] = 0x09;
     str[3] = 0x10;
     str[4] = 0xf0;
@@ -97,8 +98,8 @@ start_overflow(void)
     str[8] = 0x11;
     str[9] = 0xf0;	
     str[10] = 0x68;
-    str[11] = 0x7f;
-    str[12] = 0x08;
+    str[11] = 0x2c;
+    str[12] = 0x09;
     str[13] = 0x10;
     str[14] = 0xf0;
     str[15] = 0xc3;
@@ -144,6 +145,24 @@ mon_backtrace(int argc, char **argv, struct Trapframe *tf)
     return 0;
 }
 
+int 
+time(int argc, char **argv, struct Trapframe *tf){
+        uint64_t start = 0,end = 0;
+        int ret = 0,i = 0;
+
+	start = getCycles();
+	for (i = 0; i < NCOMMANDS; i++) {
+		if (strcmp(argv[1], commands[i].name) == 0){
+			start = getCycles();			 
+			ret = commands[i].func(argc-1, argv+1, tf);
+			end = getCycles();
+			break;
+		}
+	}
+	cprintf("kerninfo cycles: %ld\n",end-start);
+	return ret;
+
+}
 
 
 /***** Kernel monitor command interpreter *****/
