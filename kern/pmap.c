@@ -103,8 +103,9 @@ boot_alloc(uint32_t n)
 	// to a multiple of PGSIZE.
 	//
 	// LAB 2: Your code here.
-
-	return NULL;
+	char *next = nextfree;
+	nextfree = ROUNDUP((char *) (nextfree+n), PGSIZE);
+	return next;
 }
 
 // Set up a two-level page table:
@@ -126,7 +127,7 @@ mem_init(void)
 	i386_detect_memory();
 
 	// Remove this line when you're ready to test this function.
-	panic("mem_init: This function is not finished\n");
+	//panic("mem_init: This function is not finished\n");
 
 	//////////////////////////////////////////////////////////////////////
 	// create initial page directory.
@@ -148,6 +149,8 @@ mem_init(void)
 	// each physical page, there is a corresponding struct Page in this
 	// array.  'npages' is the number of physical pages in memory.
 	// Your code goes here:
+	pages = (struct Page *) boot_alloc(sizeof(struct Page) * npages);
+
 
 	//////////////////////////////////////////////////////////////////////
 	// Now that we've allocated the initial kernel data structures, we set
@@ -253,7 +256,19 @@ page_init(void)
 	// NB: DO NOT actually touch the physical memory corresponding to
 	// free pages!
 	size_t i;
-	for (i = 0; i < npages; i++) {
+      
+	//size_t lowIndexInUse   =  PGNUM(IOPHYSMEM);
+        int highIndexInUse  =  PGNUM( (int)boot_alloc(0)-KERNBASE );
+	
+	//cprintf("=====%d======%d====\n",npages_basemem,PGNUM(IOPHYSMEM));
+
+	for (i = 1; i < npages_basemem; i++) {
+		pages[i].pp_ref = 0;
+		pages[i].pp_link = page_free_list;
+		page_free_list = &pages[i];
+	}
+
+	for (i = highIndexInUse ; i < npages; i++) {
 		pages[i].pp_ref = 0;
 		pages[i].pp_link = page_free_list;
 		page_free_list = &pages[i];
@@ -273,8 +288,14 @@ page_init(void)
 struct Page *
 page_alloc(int alloc_flags)
 {
-	// Fill this function in
-	return 0;
+	if(!page_free_list)  return NULL;
+	 
+        struct Page* tmp =  page_free_list;
+	if(alloc_flags & ALLOC_ZERO){
+		memset(page2kva(tmp),0,PGSIZE);
+	}
+	page_free_list = page_free_list->pp_link;
+	return tmp;
 }
 
 //
@@ -318,7 +339,8 @@ page_free_npages(struct Page *pp, int n)
 void
 page_free(struct Page *pp)
 {
-	// Fill this function in
+	pp->pp_link = page_free_list;
+	page_free_list = pp;
 }
 
 //
