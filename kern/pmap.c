@@ -162,7 +162,7 @@ mem_init(void)
 
 	check_page_free_list(1);
 	check_page_alloc();
-	check_page();
+	//check_page();
 	check_n_pages();
 	check_realloc_npages();
 
@@ -316,7 +316,59 @@ page_alloc(int alloc_flags)
 struct Page *
 page_alloc_npages(int alloc_flags, int n)
 {
-	// Fill this function
+	if(n<=0)  return NULL;
+	
+	int i , j;
+	bool canFind = 0;
+	struct Page *p1 = NULL , *p2 = NULL;
+	for(i = 0 ; i < npages-n ; i++){
+		
+		for( j = i ; j < i+n ; j++){
+			
+			bool find = 0;
+			for(p1 = p2 = page_free_list ; p1 != NULL ; p2 = p1 , p1 = p1->pp_link){
+				if(p1 == &pages[j]){
+					find = 1;
+					break;
+				}
+			}
+			if(!find) break;			
+		}
+		if(j == i+n) {
+			canFind = 1;
+			break;
+		}
+		i = j+1;
+	}
+	
+	if(canFind){
+		
+		p1 = page_free_list;
+		while(&pages[i]<= p1 && p1 < &pages[j]){
+			p1 = p1->pp_link;		
+		}
+		p2 = page_free_list = p1;
+		p1 = p1->pp_link;
+		for( ; p1 != NULL ; p2 = p1, p1 = p1->pp_link){
+			if(p1 >= &pages[i] && p1 < &pages[j] && p1!=NULL){
+				while(p1->pp_link >= &pages[i] && p1->pp_link < &pages[j]){
+					p1 = p1->pp_link;
+				}
+				p2->pp_link = p1->pp_link;
+			}
+		}
+
+		for(j = 0 ; j < n-1 ; j++){
+			pages[i+j].pp_link = &pages[i+j+1];
+			///cprintf("=====%p====\n" , &pages[i+j]);		
+		}
+		if(alloc_flags & ALLOC_ZERO){
+			memset(page2kva(&pages[i]),0,PGSIZE*n);
+		}
+		return &pages[i];
+	
+	}
+	 
 	return NULL;
 }
 
@@ -328,8 +380,20 @@ page_alloc_npages(int alloc_flags, int n)
 int
 page_free_npages(struct Page *pp, int n)
 {
-	// Fill this function
-	return -1;
+	if(n <= 0 || !check_continuous(pp,n)) return -1;
+	
+	struct Page * freeList = pp;
+	int i = 0 ;
+
+	for(  ; i < n-1 ; i++)  {
+		freeList = freeList -> pp_link;	
+		///cprintf("=====%p====\n" , freeList);	
+	}	
+	
+	freeList -> pp_link = page_free_list;
+	page_free_list = pp;
+
+	return 0;
 }
 
 //
@@ -351,7 +415,50 @@ page_free(struct Page *pp)
 struct Page *
 page_realloc_npages(struct Page *pp, int old_n, int new_n)
 {
-	// Fill this function
+	if(old_n < 0 || new_n < 0 || !check_continuous(pp,old_n)) return NULL;
+	
+	if(old_n == new_n) return pp;
+
+	if(new_n < old_n){
+		page_free_npages((struct Page *)(pp+new_n),old_n-new_n);	
+		return pp;	 
+	}else{
+		
+		//check whether the following pages are free
+		int i;		
+		for(i = old_n ; i < new_n ; i++){
+			struct Page *p1 = NULL , *p2 = NULL;
+			bool available = 0;
+
+			for(p1 = p2 = page_free_list ; p1 != NULL ; p2 = p1 , p1 = p1->pp_link){
+				if(p1 == pp+i){
+					available = 1;
+					if(p1 == page_free_list ){
+						page_free_list = p1->pp_link;					
+					}else{
+						p2->pp_link = p1->pp_link;
+					}
+					p1->pp_link = NULL;
+					break;
+				}
+			}
+
+			if(!available) break;			
+
+		}
+		
+		if(i == new_n ){
+			for( i = old_n-1 ; i < new_n - 1 ; i++){
+				((struct Page *)(pp+i))->pp_link = pp+i+1;
+			}
+			return pp;
+		}else{
+			page_free_npages(pp,i);
+			return page_alloc_npages(0,new_n);		
+		}
+
+	}
+
 	return NULL;
 }
 
@@ -889,17 +996,18 @@ check_n_pages(void)
 	page_free(pp);
 	pp = page_alloc_npages(0, 4);
 	assert(check_continuous(pp, 4));
-
+	
 	// Free four continuous pages
 	assert(!page_free_npages(pp, 4));
-
+	
 	// Free pp and assign eight continuous pages
 	pp = page_alloc_npages(0, 8);
+	//cprintf("==========996 success!!!\n");
 	assert(check_continuous(pp, 8));
-
+	
 	// Free four continuous pages
 	assert(!page_free_npages(pp, 8));
-
+	
 
 	// Free pp0 and assign four continuous zero pages
 	page_free(pp0);
